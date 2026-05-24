@@ -158,7 +158,7 @@ MODEL_CONFIGS = {
     },
     "claude-3.5-sonnet": {
         "provider": "anthropic",
-        "model": "claude-sonnet-4-20250514",
+        "model": "claude-sonnet-4-6",
         "max_tokens": 2048,
         "context_window": 200_000,
     },
@@ -849,8 +849,121 @@ def run_prompt_injection_test_suite():
     return results
 
 
+def score_prompt(prompt_text, criteria):
+    scores = {}
+    for area, keywords in criteria.items():
+        count = sum(1 for kw in keywords if kw.lower() in prompt_text.lower())
+        scores[area] = round(count / len(keywords), 3) if keywords else 0.0
+    return scores
+
+
+def _rewrite_prompt(prompt_text, weak_area, keywords):
+    request = format_anthropic_request(
+        {
+            "system": "You are a prompt engineering expert. Improve prompts concisely and precisely.",
+            "user": (
+                f"Rewrite this prompt to strengthen its '{weak_area}' dimension.\n\n"
+                f"Current prompt:\n{prompt_text}\n\n"
+                f"Incorporate elements related to: {', '.join(keywords)}.\n"
+                f"Return ONLY the rewritten prompt. No explanation."
+            ),
+            "temperature": 0.3,
+        }
+    )
+    return call_anthropic(request)["response"]
+
+
+def prompt_optimizer(
+    prompt_text="You are a marketing expert, write a compelling marketing campaign.",
+):
+    criteria = {
+        "role": ["you are a", "expert", "as a", "your task", "your role"],
+        "constraint": ["do not", "always", "only", "never", "if", "must", "avoid"],
+        "output_format": [
+            "json",
+            "markdown",
+            "numbered",
+            "bullet",
+            "format",
+            "structure",
+            "list",
+        ],
+    }
+
+    print("=" * 70)
+    print("  PROMPT OPTIMIZER")
+    print("=" * 70)
+    print(f'\n  Prompt to optimize:\n    "{prompt_text}"')
+
+    # Stage 1: Score original prompt structure
+    original_scores = score_prompt(prompt_text, criteria)
+    weakest_area = min(original_scores, key=original_scores.get)
+
+    print(f"\n  --- Stage 1: Structural Analysis ---")
+    for area, score in original_scores.items():
+        filled = int(score * 20)
+        bar = "█" * filled + "░" * (20 - filled)
+        matched = sum(1 for kw in criteria[area] if kw.lower() in prompt_text.lower())
+        marker = "  ← WEAKEST" if area == weakest_area else ""
+        print(
+            f"  {area:<15}: {score:.3f}  {bar}  [{matched}/{len(criteria[area])} keywords]{marker}"
+        )
+
+    # Stage 2: Run original prompt 5 times at temp=0.7
+    print(f"\n  --- Stage 2: 5 Runs at temperature=0.7 ---")
+    run_request = format_anthropic_request(
+        {
+            "system": "You are a helpful assistant.",
+            "user": prompt_text,
+            "temperature": 0.7,
+        }
+    )
+
+    responses = []
+    for i in range(5):
+        result = call_anthropic(run_request)
+        responses.append(result["response"])
+        print(f"  [Run {i + 1}] {result['response'][:100].strip()}...")
+
+    # Stage 3: Identify weakest area
+    missing = [
+        kw for kw in criteria[weakest_area] if kw.lower() not in prompt_text.lower()
+    ]
+    print(f"\n  --- Stage 3: Weakest Area ---")
+    print(f"  Weakest : {weakest_area} (score: {original_scores[weakest_area]:.3f})")
+    print(f"  Missing : {missing}")
+
+    # Stage 4: Rewrite prompt to fix the weakest area
+    print(f"\n  --- Stage 4: Rewriting Prompt ---")
+    rewritten = _rewrite_prompt(prompt_text, weakest_area, criteria[weakest_area])
+    print(f'  Rewritten:\n    "{rewritten}"')
+
+    # Stage 5: Score rewritten prompt and compare
+    rewritten_scores = score_prompt(rewritten, criteria)
+    print(f"\n  --- Stage 5: Score Comparison ---")
+    print(f"  {'Area':<15} {'Before':>8} {'After':>8} {'Delta':>8}")
+    print(f"  {'-' * 43}")
+    for area in criteria:
+        before = original_scores[area]
+        after = rewritten_scores[area]
+        delta = after - before
+        marker = "  ↑ improved" if delta > 0 else ""
+        print(f"  {area:<15} {before:>8.3f} {after:>8.3f} {delta:>+8.3f}{marker}")
+
+    print()
+    return {
+        "original_prompt": prompt_text,
+        "rewritten_prompt": rewritten,
+        "original_scores": original_scores,
+        "rewritten_scores": rewritten_scores,
+        "weakest_area": weakest_area,
+        "sample_responses": responses,
+    }
+
+
 if __name__ == "__main__":
-    run_pattern_catalog_demo()
-    run_single_prompt_demo()
-    run_test_suite()
-    run_prompt_injection_test_suite()
+    # run_pattern_catalog_demo()
+    # run_single_prompt_demo()
+    # run_test_suite()
+    # run_prompt_injection_test_suite()
+    prompt_optimizer()
