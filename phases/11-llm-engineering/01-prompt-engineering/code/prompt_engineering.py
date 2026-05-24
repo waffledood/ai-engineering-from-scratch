@@ -489,16 +489,23 @@ TEST_SUITE = [
         },
     },
     {
-        "name": "Meta-Prompt: Data Structures & Algorithms",
+        "name": "Meta-Prompt: Data Structures & Algorithms - Stack",
         "pattern": "meta_prompt",
         "variables": {
-            "objective": "teach data structures & algorithms through guided questioning",
+            "objective": "teach the stack data structure in Python through guided questioning",
             "metric": "conciseness & ease of understanding",
             "model": "claude-3.5-sonnet",
         },
         "criteria": {
-            "required_keywords": ["data", "structures", "algorithms"],
-            "forbidden_phrases": ["in conclusion", "it is important to note"],
+            "required_keywords": [
+                "data",
+                "structure",
+                "stack",
+                "[]",
+                "append",
+                "pop",
+            ],
+            "forbidden_phrases": ["C", "JavaScript", "heap", "linked list"],
         },
     },
 ]
