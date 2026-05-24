@@ -3,7 +3,6 @@ import time
 import hashlib
 import re
 
-
 PROMPT_PATTERNS = {
     "persona": {
         "name": "Persona Pattern",
@@ -170,7 +169,9 @@ MODEL_CONFIGS = {
 def build_prompt(pattern_name, variables, system_override=None):
     pattern = PROMPT_PATTERNS.get(pattern_name)
     if not pattern:
-        raise ValueError(f"Unknown pattern: {pattern_name}. Available: {list(PROMPT_PATTERNS.keys())}")
+        raise ValueError(
+            f"Unknown pattern: {pattern_name}. Available: {list(PROMPT_PATTERNS.keys())}"
+        )
 
     missing = [v for v in pattern["variables"] if v not in variables]
     if missing:
@@ -236,7 +237,10 @@ def format_google_request(prompt):
     return {
         "model": MODEL_CONFIGS["gemini-1.5-pro"]["model"],
         "contents": [
-            {"role": "user", "parts": [{"text": f"{prompt['system']}\n\n{prompt['user']}"}]},
+            {
+                "role": "user",
+                "parts": [{"text": f"{prompt['system']}\n\n{prompt['user']}"}],
+            },
         ],
         "generationConfig": {
             "temperature": prompt["temperature"],
@@ -254,7 +258,9 @@ FORMATTERS = {
 
 def simulate_llm_call(model_name, request):
     time.sleep(0.01)
-    prompt_hash = hashlib.md5(json.dumps(request, sort_keys=True).encode()).hexdigest()[:8]
+    prompt_hash = hashlib.md5(json.dumps(request, sort_keys=True).encode()).hexdigest()[
+        :8
+    ]
 
     simulated_responses = {
         "gpt-4o": {
@@ -327,7 +333,11 @@ def score_response(response_text, criteria):
         scores["length_compliant"] = word_count <= criteria["max_words"]
 
     if "required_keywords" in criteria:
-        found = [kw for kw in criteria["required_keywords"] if kw.lower() in response_text.lower()]
+        found = [
+            kw
+            for kw in criteria["required_keywords"]
+            if kw.lower() in response_text.lower()
+        ]
         scores["keywords_found"] = found
         scores["keyword_coverage"] = (
             len(found) / len(criteria["required_keywords"])
@@ -336,7 +346,11 @@ def score_response(response_text, criteria):
         )
 
     if "forbidden_phrases" in criteria:
-        violations = [fp for fp in criteria["forbidden_phrases"] if fp.lower() in response_text.lower()]
+        violations = [
+            fp
+            for fp in criteria["forbidden_phrases"]
+            if fp.lower() in response_text.lower()
+        ]
         scores["forbidden_violations"] = violations
         scores["no_violations"] = len(violations) == 0
 
@@ -474,6 +488,19 @@ TEST_SUITE = [
             "forbidden_phrases": ["here is the complete solution"],
         },
     },
+    {
+        "name": "Meta-Prompt: Data Structures & Algorithms",
+        "pattern": "meta_prompt",
+        "variables": {
+            "objective": "teach data structures & algorithms through guided questioning",
+            "metric": "conciseness & ease of understanding",
+            "model": "claude-3.5-sonnet",
+        },
+        "criteria": {
+            "required_keywords": ["data", "structures", "algorithms"],
+            "forbidden_phrases": ["in conclusion", "it is important to note"],
+        },
+    },
 ]
 
 
@@ -506,11 +533,15 @@ def run_test_suite():
             latency = data["latency_ms"]
             print(f"  {model_name:<25} {score:>8.3f} {tokens:>8} {latency:>8}ms")
 
-        all_results.append({
-            "test": test["name"],
-            "pattern": test["pattern"],
-            "rankings": [(name, data["scores"]["composite_score"]) for name, data in ranked],
-        })
+        all_results.append(
+            {
+                "test": test["name"],
+                "pattern": test["pattern"],
+                "rankings": [
+                    (name, data["scores"]["composite_score"]) for name, data in ranked
+                ],
+            }
+        )
 
     print(f"\n\n{'=' * 70}")
     print("  SUMMARY: MODEL RANKINGS ACROSS ALL TESTS")
@@ -545,13 +576,16 @@ def run_single_prompt_demo():
     print("  SINGLE PROMPT BUILD + TEST")
     print("=" * 70)
 
-    prompt = build_prompt("persona", {
-        "role": "a senior DevOps engineer at Netflix",
-        "experience": "8 years of infrastructure automation",
-        "style": "direct and practical",
-        "priority": "reliability over speed",
-        "task": "Explain why container orchestration matters for microservices.",
-    })
+    prompt = build_prompt(
+        "persona",
+        {
+            "role": "a senior DevOps engineer at Netflix",
+            "experience": "8 years of infrastructure automation",
+            "style": "direct and practical",
+            "priority": "reliability over speed",
+            "task": "Explain why container orchestration matters for microservices.",
+        },
+    )
 
     print(f"\n  System message:\n    {prompt['system']}")
     print(f"\n  User message:\n    {prompt['user'][:200]}...")
