@@ -519,6 +519,25 @@ TEST_SUITE = [
             "forbidden_phrases": ["I don't know", "As an AI", "I cannot"],
         },
     },
+    {
+        "name": "Audience Adaption: Explaining OOP to high schoolers",
+        "pattern": "audience_adapt",
+        "variables": {
+            "concept": "Object Oriented Programming (OOP)",
+            "audience": "high schoolers",
+            "length": "50 words",
+            "include": "1 simple code example, simple real-life example they can relate to e.g. car, bus",
+            "exclude": "Complicated code examples, access modifiers",
+        },
+        "criteria": {
+            "required_keywords": [
+                "object",
+                "class",
+                "model",
+            ],
+            "forbidden_phrases": ["private", "protected", "public"],
+        },
+    },
 ]
 
 
