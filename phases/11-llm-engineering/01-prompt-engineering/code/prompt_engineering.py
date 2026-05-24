@@ -1,7 +1,12 @@
 import json
 import time
 import hashlib
+import os
 import re
+from anthropic import Anthropic
+from dotenv import load_dotenv
+
+load_dotenv()
 
 PROMPT_PATTERNS = {
     "persona": {
@@ -153,7 +158,7 @@ MODEL_CONFIGS = {
     },
     "claude-3.5-sonnet": {
         "provider": "anthropic",
-        "model": "claude-3-5-sonnet-20241022",
+        "model": "claude-sonnet-4-20250514",
         "max_tokens": 2048,
         "context_window": 200_000,
     },
@@ -256,11 +261,34 @@ FORMATTERS = {
 }
 
 
+def call_anthropic(request):
+    client = Anthropic()
+    start = time.time()
+    message = client.messages.create(**request)
+    latency_ms = round((time.time() - start) * 1000)
+
+    return {
+        "response": message.content[0].text,
+        "tokens_used": {
+            "prompt": message.usage.input_tokens,
+            "completion": message.usage.output_tokens,
+            "total": message.usage.input_tokens + message.usage.output_tokens,
+        },
+        "latency_ms": latency_ms,
+        "finish_reason": message.stop_reason,
+    }
+
+
 def simulate_llm_call(model_name, request):
     time.sleep(0.01)
     prompt_hash = hashlib.md5(json.dumps(request, sort_keys=True).encode()).hexdigest()[
         :8
     ]
+
+    if model_name == "claude-3.5-sonnet":
+        anthropicResponse = call_anthropic(request)
+
+        return anthropicResponse
 
     simulated_responses = {
         "gpt-4o": {
