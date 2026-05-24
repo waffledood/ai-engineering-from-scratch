@@ -508,6 +508,17 @@ TEST_SUITE = [
             "forbidden_phrases": ["C", "JavaScript", "heap", "linked list"],
         },
     },
+    {
+        "name": "Decomposition: Math Trivia",
+        "pattern": "decomposition",
+        "variables": {
+            "problem": "Find the values of y & x that satisfy these 2 equations: y = 2x - 12, x = y",
+        },
+        "criteria": {
+            "required_keywords": ["y = 12", "x = 12"],
+            "forbidden_phrases": ["I don't know", "As an AI", "I cannot"],
+        },
+    },
 ]
 
 
