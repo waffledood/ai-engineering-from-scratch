@@ -350,16 +350,12 @@ def react_solve(question, client, model, max_steps=5):
                 observation = f"Observation: Error - {e}"
             messages.append({"role": "user", "content": observation})
 
-    full_text = "\n".join(
-        m["content"] for m in messages if m["role"] == "assistant"
-    )
+    full_text = "\n".join(m["content"] for m in messages if m["role"] == "assistant")
     return extract_answer(full_text), full_text
 
 
 def solve_with_escalation(question, examples, client, model):
-    single_answer, single_text = few_shot_cot_solve(
-        question, examples, client, model
-    )
+    single_answer, single_text = few_shot_cot_solve(question, examples, client, model)
 
     sc_answer, confidence, reasonings, votes = self_consistency_solve(
         question, examples, client, model, n_samples=5
@@ -442,7 +438,11 @@ def run_comparison(questions, expected_answers, examples, client, model):
             results[name]["total"] += 1
             if is_correct:
                 results[name]["correct"] += 1
-            status = "CORRECT" if is_correct else f"WRONG (got {answer}, expected {expected})"
+            status = (
+                "CORRECT"
+                if is_correct
+                else f"WRONG (got {answer}, expected {expected})"
+            )
             print(f"  {name:20s}: {status}")
 
     print("\n" + "=" * 50)
