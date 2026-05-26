@@ -193,6 +193,12 @@ def zero_shot_solve(question, client, model):
     return extract_answer(text), text
 
 
+def few_shot_solve(question, examples, client, model, num_examples=3):
+    system, user = build_few_shot_prompt(question, examples, num_examples)
+    text = call_llm(client, model, system, user, temperature=0.0)
+    return extract_answer(text), text
+
+
 def zero_shot_cot_solve(question, client, model):
     system, user = build_zero_shot_cot_prompt(question)
     text = call_llm(client, model, system, user, temperature=0.0)
@@ -379,6 +385,41 @@ def solve_with_escalation(question, examples, client, model):
         "votes": dict(votes),
         "reasoning": tot_reasoning,
     }
+
+
+def ex01(questions, expected_answers, examples, client, model):
+    methods = {
+        "zero_shot": lambda q: zero_shot_solve(q, client, model),
+        "few_shot": lambda q: few_shot_solve(q, examples, client, model),
+        "zero_shot_cot": lambda q: zero_shot_cot_solve(q, client, model),
+        "few_shot_cot": lambda q: few_shot_cot_solve(q, examples, client, model),
+    }
+
+    results = {name: {"correct": 0, "total": 0} for name in methods}
+
+    for i, (question, expected) in enumerate(zip(questions, expected_answers)):
+        print(f"\nProblem {i + 1}: {question[:60]}...")
+        for name, solver in methods.items():
+            answer, *_ = solver(question)
+            is_correct = str(answer) == str(expected)
+            results[name]["total"] += 1
+            if is_correct:
+                results[name]["correct"] += 1
+            status = (
+                "CORRECT"
+                if is_correct
+                else f"WRONG (got {answer}, expected {expected})"
+            )
+            print(f"  {name:20s}: {status}")
+
+    print("\n" + "=" * 50)
+    print("ACCURACY SUMMARY")
+    print("=" * 50)
+    for name, counts in results.items():
+        acc = counts["correct"] / counts["total"] * 100 if counts["total"] > 0 else 0
+        print(f"  {name:20s}: {acc:.1f}% ({counts['correct']}/{counts['total']})")
+
+    return results
 
 
 def run_comparison(questions, expected_answers, examples, client, model):
