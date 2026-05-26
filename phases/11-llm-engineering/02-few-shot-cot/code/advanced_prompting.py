@@ -563,6 +563,44 @@ TEST_QUESTIONS = [
         ),
         "answer": "624",
     },
+    {
+        "question": (
+            "Bella bought stamps at the post office. Some of the stamps had a snowflake design, some had a truck design, and some had a rose design. "
+            "Bella bought 11 snowflake stamps. She bought 9 more truck stamps than snowflake stamps, and 13 fewer rose stamps than truck stamps. "
+            "How many stamps did Bella buy in all?"
+        ),
+        "answer": "38",
+    },
+    {
+        "question": (
+            "Ann's favorite store was having a summer clearance. For $75 she bought 5 pairs of shorts for $7 each and 2 pairs of shoes for $10 each. "
+            "She also bought 4 tops, all at the same price. How much did each top cost?"
+        ),
+        "answer": "5",
+    },
+    {
+        "question": (
+            "Five friends eat at a fast-food chain and order the following: 5 pieces of hamburger that cost $3 each; "
+            "4 sets of French fries that cost $1.20; 5 cups of soda that cost $0.5 each; and 1 platter of spaghetti that cost $2.7. "
+            "How much will each of them pay if they will split the bill equally?"
+        ),
+        "answer": "5",
+    },
+    {
+        "question": (
+            "Ann is cutting fabric to make curtains. She cuts a 4 foot by 6 foot rectangle for the living room, and a 2 foot by 4 foot rectangle for the bedroom. "
+            "If the bolt of fabric is 16 feet by 12 feet, how much fabric is left in square feet?"
+        ),
+        "answer": "160",
+    },
+    {
+        "question": (
+            "Leo's assignment was divided into three parts. He finished the first part of his assignment in 25 minutes. "
+            "It took him twice as long to finish the second part. If he was able to finish his assignment in 2 hours, "
+            "how many minutes did Leo finish the third part of the assignment?"
+        ),
+        "answer": "45",
+    },
 ]
 
 
@@ -581,36 +619,36 @@ if __name__ == "__main__":
     print("\n--- Technique Comparison ---")
     ex01(questions, expected, GSM8K_EXAMPLES, client, model)
 
-    print("=" * 60)
-    print("ADVANCED PROMPTING PIPELINE")
-    print("Few-Shot + CoT + Self-Consistency + Tree-of-Thought")
-    print("=" * 60)
+    # print("=" * 60)
+    # print("ADVANCED PROMPTING PIPELINE")
+    # print("Few-Shot + CoT + Self-Consistency + Tree-of-Thought")
+    # print("=" * 60)
 
-    questions = [t["question"] for t in TEST_QUESTIONS]
-    expected = [t["answer"] for t in TEST_QUESTIONS]
+    # questions = [t["question"] for t in TEST_QUESTIONS]
+    # expected = [t["answer"] for t in TEST_QUESTIONS]
 
-    print("\n--- Technique Comparison ---")
-    run_comparison(questions, expected, GSM8K_EXAMPLES, client, model)
+    # print("\n--- Technique Comparison ---")
+    # run_comparison(questions, expected, GSM8K_EXAMPLES, client, model)
 
-    print("\n\n--- Escalation Pipeline ---")
-    for test in TEST_QUESTIONS[:2]:
-        print(f"\nQ: {test['question'][:80]}...")
-        result = solve_with_escalation(test["question"], GSM8K_EXAMPLES, client, model)
-        print(f"  Method: {result['method']}")
-        print(f"  Answer: {result['answer']} (expected: {test['answer']})")
-        print(f"  Confidence: {result['confidence']}")
+    # print("\n\n--- Escalation Pipeline ---")
+    # for test in TEST_QUESTIONS[:2]:
+    #     print(f"\nQ: {test['question'][:80]}...")
+    #     result = solve_with_escalation(test["question"], GSM8K_EXAMPLES, client, model)
+    #     print(f"  Method: {result['method']}")
+    #     print(f"  Answer: {result['answer']} (expected: {test['answer']})")
+    #     print(f"  Confidence: {result['confidence']}")
 
-    print("\n\n--- Prompt Chaining ---")
-    for test in TEST_QUESTIONS[:2]:
-        print(f"\nQ: {test['question'][:80]}...")
-        answer, chain = prompt_chain_solve(test["question"], client, model)
-        print(f"  Answer: {answer} (expected: {test['answer']})")
-        print(f"  Steps: extract -> solve -> verify")
+    # print("\n\n--- Prompt Chaining ---")
+    # for test in TEST_QUESTIONS[:2]:
+    #     print(f"\nQ: {test['question'][:80]}...")
+    #     answer, chain = prompt_chain_solve(test["question"], client, model)
+    #     print(f"  Answer: {answer} (expected: {test['answer']})")
+    #     print(f"  Steps: extract -> solve -> verify")
 
-    print("\n\n--- ReAct ---")
-    for test in TEST_QUESTIONS[:2]:
-        print(f"\nQ: {test['question'][:80]}...")
-        answer, trace = react_solve(test["question"], client, model)
-        print(f"  Answer: {answer} (expected: {test['answer']})")
+    # print("\n\n--- ReAct ---")
+    # for test in TEST_QUESTIONS[:2]:
+    #     print(f"\nQ: {test['question'][:80]}...")
+    #     answer, trace = react_solve(test["question"], client, model)
+    #     print(f"  Answer: {answer} (expected: {test['answer']})")
 
     print("\n\nDone.")
