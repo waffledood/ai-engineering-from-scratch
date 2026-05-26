@@ -572,6 +572,17 @@ if __name__ == "__main__":
 
     print("=" * 60)
     print("ADVANCED PROMPTING PIPELINE")
+    print("Zero-Shot + Few-Shot + CoT + Few-Shot CoT")
+    print("=" * 60)
+
+    questions = [t["question"] for t in TEST_QUESTIONS]
+    expected = [t["answer"] for t in TEST_QUESTIONS]
+
+    print("\n--- Technique Comparison ---")
+    ex01(questions, expected, GSM8K_EXAMPLES, client, model)
+
+    print("=" * 60)
+    print("ADVANCED PROMPTING PIPELINE")
     print("Few-Shot + CoT + Self-Consistency + Tree-of-Thought")
     print("=" * 60)
 
@@ -584,9 +595,7 @@ if __name__ == "__main__":
     print("\n\n--- Escalation Pipeline ---")
     for test in TEST_QUESTIONS[:2]:
         print(f"\nQ: {test['question'][:80]}...")
-        result = solve_with_escalation(
-            test["question"], GSM8K_EXAMPLES, client, model
-        )
+        result = solve_with_escalation(test["question"], GSM8K_EXAMPLES, client, model)
         print(f"  Method: {result['method']}")
         print(f"  Answer: {result['answer']} (expected: {test['answer']})")
         print(f"  Confidence: {result['confidence']}")
