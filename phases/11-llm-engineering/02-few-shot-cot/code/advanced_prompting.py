@@ -147,6 +147,23 @@ def build_zero_shot_cot_prompt(question):
     return system, user
 
 
+def build_few_shot_prompt(question, examples, num_examples=3):
+    system = (
+        "You are a precise math problem solver. "
+        "Give only the final numerical answer. "
+        "End with: 'The answer is [number]'."
+        "Here are a few questions & answers to sample:"
+    )
+
+    example_text = ""
+    for ex in examples[:num_examples]:
+        example_text += f"Q: {ex['question']}\n"
+        example_text += f"A: {ex['reasoning']} The answer is {ex['answer']}.\n\n"
+
+    user = f"{example_text}Q: {question}\nA:"
+    return system, user
+
+
 def build_zero_shot_prompt(question):
     system = (
         "You are a precise math problem solver. "
