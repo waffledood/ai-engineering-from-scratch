@@ -3,7 +3,9 @@ import re
 import os
 from collections import Counter
 from openai import OpenAI
+from dotenv import load_dotenv
 
+load_dotenv()
 
 GSM8K_EXAMPLES = [
     {
@@ -565,7 +567,7 @@ TEST_QUESTIONS = [
 
 
 if __name__ == "__main__":
-    client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY", "your-api-key"))
+    client = OpenAI()
     model = "gpt-4o"
 
     print("=" * 60)
