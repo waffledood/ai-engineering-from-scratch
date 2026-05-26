@@ -3,7 +3,9 @@ import re
 import os
 from collections import Counter
 from openai import OpenAI
+from dotenv import load_dotenv
 
+load_dotenv()
 
 GSM8K_EXAMPLES = [
     {
@@ -105,16 +107,16 @@ def extract_answer(text):
     if not text:
         return None
     patterns = [
-        r"[Tt]he answer is[:\s]*\$?([\d,]+\.?\d*)",
-        r"[Tt]he answer is[:\s]*([\d,]+\.?\d*)",
-        r"#### ([\d,]+\.?\d*)",
-        r"= \$?([\d,]+\.?\d*)\s*$",
+        r"[Tt]he answer is[:\s]*\$?([\d,]+(?:\.\d+)?)",
+        r"[Tt]he answer is[:\s]*([\d,]+(?:\.\d+)?)",
+        r"#### ([\d,]+(?:\.\d+)?)",
+        r"= \$?([\d,]+(?:\.\d+)?)\s*$",
     ]
     for pattern in patterns:
         match = re.search(pattern, text)
         if match:
             return match.group(1).replace(",", "")
-    numbers = re.findall(r"[\d,]+\.?\d*", text)
+    numbers = re.findall(r"[\d,]+(?:\.\d+)?", text)
     if numbers:
         return numbers[-1].replace(",", "")
     return None
@@ -147,6 +149,23 @@ def build_zero_shot_cot_prompt(question):
     return system, user
 
 
+def build_few_shot_prompt(question, examples, num_examples=3):
+    system = (
+        "You are a precise math problem solver. "
+        "Give only the final numerical answer. "
+        "End with: 'The answer is [number]'."
+        "Here are a few questions & answers to sample:"
+    )
+
+    example_text = ""
+    for ex in examples[:num_examples]:
+        example_text += f"Q: {ex['question']}\n"
+        example_text += f"A: {ex['reasoning']} The answer is {ex['answer']}.\n\n"
+
+    user = f"{example_text}Q: {question}\nA:"
+    return system, user
+
+
 def build_zero_shot_prompt(question):
     system = (
         "You are a precise math problem solver. "
@@ -172,6 +191,12 @@ def call_llm(client, model, system, user, temperature=0.0):
 
 def zero_shot_solve(question, client, model):
     system, user = build_zero_shot_prompt(question)
+    text = call_llm(client, model, system, user, temperature=0.0)
+    return extract_answer(text), text
+
+
+def few_shot_solve(question, examples, client, model, num_examples=3):
+    system, user = build_few_shot_prompt(question, examples, num_examples)
     text = call_llm(client, model, system, user, temperature=0.0)
     return extract_answer(text), text
 
@@ -327,16 +352,12 @@ def react_solve(question, client, model, max_steps=5):
                 observation = f"Observation: Error - {e}"
             messages.append({"role": "user", "content": observation})
 
-    full_text = "\n".join(
-        m["content"] for m in messages if m["role"] == "assistant"
-    )
+    full_text = "\n".join(m["content"] for m in messages if m["role"] == "assistant")
     return extract_answer(full_text), full_text
 
 
 def solve_with_escalation(question, examples, client, model):
-    single_answer, single_text = few_shot_cot_solve(
-        question, examples, client, model
-    )
+    single_answer, single_text = few_shot_cot_solve(question, examples, client, model)
 
     sc_answer, confidence, reasonings, votes = self_consistency_solve(
         question, examples, client, model, n_samples=5
@@ -364,6 +385,41 @@ def solve_with_escalation(question, examples, client, model):
     }
 
 
+def ex01(questions, expected_answers, examples, client, model):
+    methods = {
+        "zero_shot": lambda q: zero_shot_solve(q, client, model),
+        "few_shot": lambda q: few_shot_solve(q, examples, client, model),
+        "zero_shot_cot": lambda q: zero_shot_cot_solve(q, client, model),
+        "few_shot_cot": lambda q: few_shot_cot_solve(q, examples, client, model),
+    }
+
+    results = {name: {"correct": 0, "total": 0} for name in methods}
+
+    for i, (question, expected) in enumerate(zip(questions, expected_answers)):
+        print(f"\nProblem {i + 1}: {question[:60]}...")
+        for name, solver in methods.items():
+            answer, *_ = solver(question)
+            is_correct = str(answer) == str(expected)
+            results[name]["total"] += 1
+            if is_correct:
+                results[name]["correct"] += 1
+            status = (
+                "CORRECT"
+                if is_correct
+                else f"WRONG (got {answer}, expected {expected})"
+            )
+            print(f"  {name:20s}: {status}")
+
+    print("\n" + "=" * 50)
+    print("ACCURACY SUMMARY")
+    print("=" * 50)
+    for name, counts in results.items():
+        acc = counts["correct"] / counts["total"] * 100 if counts["total"] > 0 else 0
+        print(f"  {name:20s}: {acc:.1f}% ({counts['correct']}/{counts['total']})")
+
+    return results
+
+
 def run_comparison(questions, expected_answers, examples, client, model):
     methods = {
         "zero_shot": lambda q: zero_shot_solve(q, client, model),
@@ -384,7 +440,11 @@ def run_comparison(questions, expected_answers, examples, client, model):
             results[name]["total"] += 1
             if is_correct:
                 results[name]["correct"] += 1
-            status = "CORRECT" if is_correct else f"WRONG (got {answer}, expected {expected})"
+            status = (
+                "CORRECT"
+                if is_correct
+                else f"WRONG (got {answer}, expected {expected})"
+            )
             print(f"  {name:20s}: {status}")
 
     print("\n" + "=" * 50)
@@ -503,45 +563,92 @@ TEST_QUESTIONS = [
         ),
         "answer": "624",
     },
+    {
+        "question": (
+            "Bella bought stamps at the post office. Some of the stamps had a snowflake design, some had a truck design, and some had a rose design. "
+            "Bella bought 11 snowflake stamps. She bought 9 more truck stamps than snowflake stamps, and 13 fewer rose stamps than truck stamps. "
+            "How many stamps did Bella buy in all?"
+        ),
+        "answer": "38",
+    },
+    {
+        "question": (
+            "Ann's favorite store was having a summer clearance. For $75 she bought 5 pairs of shorts for $7 each and 2 pairs of shoes for $10 each. "
+            "She also bought 4 tops, all at the same price. How much did each top cost?"
+        ),
+        "answer": "5",
+    },
+    {
+        "question": (
+            "Five friends eat at a fast-food chain and order the following: 5 pieces of hamburger that cost $3 each; "
+            "4 sets of French fries that cost $1.20; 5 cups of soda that cost $0.5 each; and 1 platter of spaghetti that cost $2.7. "
+            "How much will each of them pay if they will split the bill equally?"
+        ),
+        "answer": "5",
+    },
+    {
+        "question": (
+            "Ann is cutting fabric to make curtains. She cuts a 4 foot by 6 foot rectangle for the living room, and a 2 foot by 4 foot rectangle for the bedroom. "
+            "If the bolt of fabric is 16 feet by 12 feet, how much fabric is left in square feet?"
+        ),
+        "answer": "160",
+    },
+    {
+        "question": (
+            "Leo's assignment was divided into three parts. He finished the first part of his assignment in 25 minutes. "
+            "It took him twice as long to finish the second part. If he was able to finish his assignment in 2 hours, "
+            "how many minutes did Leo finish the third part of the assignment?"
+        ),
+        "answer": "45",
+    },
 ]
 
 
 if __name__ == "__main__":
-    client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY", "your-api-key"))
+    client = OpenAI()
     model = "gpt-4o"
 
     print("=" * 60)
     print("ADVANCED PROMPTING PIPELINE")
-    print("Few-Shot + CoT + Self-Consistency + Tree-of-Thought")
+    print("Zero-Shot + Few-Shot + CoT + Few-Shot CoT")
     print("=" * 60)
 
     questions = [t["question"] for t in TEST_QUESTIONS]
     expected = [t["answer"] for t in TEST_QUESTIONS]
 
     print("\n--- Technique Comparison ---")
-    run_comparison(questions, expected, GSM8K_EXAMPLES, client, model)
+    ex01(questions, expected, GSM8K_EXAMPLES, client, model)
 
-    print("\n\n--- Escalation Pipeline ---")
-    for test in TEST_QUESTIONS[:2]:
-        print(f"\nQ: {test['question'][:80]}...")
-        result = solve_with_escalation(
-            test["question"], GSM8K_EXAMPLES, client, model
-        )
-        print(f"  Method: {result['method']}")
-        print(f"  Answer: {result['answer']} (expected: {test['answer']})")
-        print(f"  Confidence: {result['confidence']}")
+    # print("=" * 60)
+    # print("ADVANCED PROMPTING PIPELINE")
+    # print("Few-Shot + CoT + Self-Consistency + Tree-of-Thought")
+    # print("=" * 60)
 
-    print("\n\n--- Prompt Chaining ---")
-    for test in TEST_QUESTIONS[:2]:
-        print(f"\nQ: {test['question'][:80]}...")
-        answer, chain = prompt_chain_solve(test["question"], client, model)
-        print(f"  Answer: {answer} (expected: {test['answer']})")
-        print(f"  Steps: extract -> solve -> verify")
+    # questions = [t["question"] for t in TEST_QUESTIONS]
+    # expected = [t["answer"] for t in TEST_QUESTIONS]
 
-    print("\n\n--- ReAct ---")
-    for test in TEST_QUESTIONS[:2]:
-        print(f"\nQ: {test['question'][:80]}...")
-        answer, trace = react_solve(test["question"], client, model)
-        print(f"  Answer: {answer} (expected: {test['answer']})")
+    # print("\n--- Technique Comparison ---")
+    # run_comparison(questions, expected, GSM8K_EXAMPLES, client, model)
+
+    # print("\n\n--- Escalation Pipeline ---")
+    # for test in TEST_QUESTIONS[:2]:
+    #     print(f"\nQ: {test['question'][:80]}...")
+    #     result = solve_with_escalation(test["question"], GSM8K_EXAMPLES, client, model)
+    #     print(f"  Method: {result['method']}")
+    #     print(f"  Answer: {result['answer']} (expected: {test['answer']})")
+    #     print(f"  Confidence: {result['confidence']}")
+
+    # print("\n\n--- Prompt Chaining ---")
+    # for test in TEST_QUESTIONS[:2]:
+    #     print(f"\nQ: {test['question'][:80]}...")
+    #     answer, chain = prompt_chain_solve(test["question"], client, model)
+    #     print(f"  Answer: {answer} (expected: {test['answer']})")
+    #     print(f"  Steps: extract -> solve -> verify")
+
+    # print("\n\n--- ReAct ---")
+    # for test in TEST_QUESTIONS[:2]:
+    #     print(f"\nQ: {test['question'][:80]}...")
+    #     answer, trace = react_solve(test["question"], client, model)
+    #     print(f"  Answer: {answer} (expected: {test['answer']})")
 
     print("\n\nDone.")

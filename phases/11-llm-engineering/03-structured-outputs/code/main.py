@@ -29,9 +29,13 @@ def _validate(data, schema, path, errors):
         min_items = schema.get("minItems", 0)
         max_items = schema.get("maxItems", float("inf"))
         if len(data) < min_items:
-            errors.append(f"{path}: array has {len(data)} items, minimum is {min_items}")
+            errors.append(
+                f"{path}: array has {len(data)} items, minimum is {min_items}"
+            )
         if len(data) > max_items:
-            errors.append(f"{path}: array has {len(data)} items, maximum is {max_items}")
+            errors.append(
+                f"{path}: array has {len(data)} items, maximum is {max_items}"
+            )
         items_schema = schema.get("items", {})
         for i, item in enumerate(data):
             _validate(item, items_schema, f"{path}[{i}]", errors)
@@ -65,7 +69,15 @@ def _validate(data, schema, path, errors):
 
 
 class SchemaField:
-    def __init__(self, field_type, required=True, default=None, enum=None, minimum=None, maximum=None):
+    def __init__(
+        self,
+        field_type,
+        required=True,
+        default=None,
+        enum=None,
+        minimum=None,
+        maximum=None,
+    ):
         self.field_type = field_type
         self.required = required
         self.default = default
@@ -227,8 +239,19 @@ def run_schema_validation_demo():
     print("=" * 60)
 
     test_cases = [
-        ({"product": "Sony WH-1000XM5", "price": 348.0, "in_stock": True}, "Valid complete object"),
-        ({"product": "Test", "price": 10.0, "in_stock": True, "categories": ["audio"]}, "Valid with optional array"),
+        (
+            {"product": "Sony WH-1000XM5", "price": 348.0, "in_stock": True},
+            "Valid complete object",
+        ),
+        (
+            {
+                "product": "Test",
+                "price": 10.0,
+                "in_stock": True,
+                "categories": ["audio"],
+            },
+            "Valid with optional array",
+        ),
         ({"product": "Test", "price": -5.0, "in_stock": True}, "Negative price"),
         ({"product": "Test", "in_stock": True}, "Missing required field (price)"),
         ({"product": "Test", "price": "ten", "in_stock": True}, "String as price"),
@@ -241,7 +264,9 @@ def run_schema_validation_demo():
         errors = validate_schema(data, PRODUCT_SCHEMA)
         status = "PASS" if not errors else f"FAIL: {errors}"
         print(f"\n  {label}:")
-        print(f"    Data:   {json.dumps(data) if isinstance(data, dict) else repr(data)}")
+        print(
+            f"    Data:   {json.dumps(data) if isinstance(data, dict) else repr(data)}"
+        )
         print(f"    Result: {status}")
 
 
@@ -274,11 +299,24 @@ def run_schema_generation_demo():
     print(f"\n  Event schema:")
     print(f"  {json.dumps(event_schema, indent=2)}")
 
-    valid_event = {"title": "Standup", "date": "2026-01-15", "attendees": ["Alice", "Bob"], "priority": "high"}
-    invalid_event = {"title": "Standup", "date": "2026-01-15", "attendees": ["Alice"], "priority": "urgent"}
+    valid_event = {
+        "title": "Standup",
+        "date": "2026-01-15",
+        "attendees": ["Alice", "Bob"],
+        "priority": "high",
+    }
+    invalid_event = {
+        "title": "Standup",
+        "date": "2026-01-15",
+        "attendees": ["Alice"],
+        "priority": "urgent",
+    }
 
     print(f"\n  Validating against event schema:")
-    for data, label in [(valid_event, "Valid event"), (invalid_event, "Invalid priority enum")]:
+    for data, label in [
+        (valid_event, "Valid event"),
+        (invalid_event, "Invalid priority enum"),
+    ]:
         errors = validate_schema(data, event_schema)
         status = "PASS" if not errors else f"FAIL: {errors}"
         print(f"    {label}: {status}")
