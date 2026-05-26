@@ -105,16 +105,16 @@ def extract_answer(text):
     if not text:
         return None
     patterns = [
-        r"[Tt]he answer is[:\s]*\$?([\d,]+\.?\d*)",
-        r"[Tt]he answer is[:\s]*([\d,]+\.?\d*)",
-        r"#### ([\d,]+\.?\d*)",
-        r"= \$?([\d,]+\.?\d*)\s*$",
+        r"[Tt]he answer is[:\s]*\$?([\d,]+(?:\.\d+)?)",
+        r"[Tt]he answer is[:\s]*([\d,]+(?:\.\d+)?)",
+        r"#### ([\d,]+(?:\.\d+)?)",
+        r"= \$?([\d,]+(?:\.\d+)?)\s*$",
     ]
     for pattern in patterns:
         match = re.search(pattern, text)
         if match:
             return match.group(1).replace(",", "")
-    numbers = re.findall(r"[\d,]+\.?\d*", text)
+    numbers = re.findall(r"[\d,]+(?:\.\d+)?", text)
     if numbers:
         return numbers[-1].replace(",", "")
     return None
